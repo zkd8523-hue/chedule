@@ -36,6 +36,7 @@ export const generateSchedule = (options = {}) => {
     weekendRestRotation = DEFAULT_WEEKEND_REST_ROTATION,
     weekendClosingRotation = DEFAULT_WEEKEND_CLOSING_ROTATION,
     preferConsecutiveMap = null,
+    longRestMap = null,
   } = options;
 
   const startDate = new Date(startDateStr);
@@ -68,6 +69,19 @@ export const generateSchedule = (options = {}) => {
         if (!restDays[d].includes(weekendRester)) restDays[d].push(weekendRester);
       }
     });
+    if (longRestMap && longRestMap[weekendRester]) {
+      const nextMon = new Date(weekStart);
+      nextMon.setDate(weekStart.getDate() + 7);
+      const nextTue = new Date(nextMon);
+      nextTue.setDate(nextMon.getDate() + 1);
+      [nextMon, nextTue].forEach(d => {
+        if (d <= endDate) {
+          const ds = toDateString(d);
+          if (!restDays[ds]) restDays[ds] = [];
+          if (!restDays[ds].includes(weekendRester)) restDays[ds].push(weekendRester);
+        }
+      });
+    }
     weekStart.setDate(weekStart.getDate() + 7);
     weekIdx++;
   }
