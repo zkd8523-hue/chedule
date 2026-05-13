@@ -43,6 +43,7 @@ body {
   margin: 0 auto;
   gap: 2rem;
   padding: 2rem;
+  transition: gap 0.25s ease;
 }
 
 .sidebar {
@@ -59,6 +60,21 @@ body {
   flex-direction: column;
   gap: 2rem;
   overflow-y: auto;
+  transition: width 0.25s ease, padding 0.25s ease, opacity 0.2s ease;
+}
+
+.dashboard.sidebar-collapsed {
+  max-width: 100%;
+  gap: 0;
+}
+
+.dashboard.sidebar-collapsed .sidebar {
+  width: 0;
+  min-width: 0;
+  padding: 0;
+  opacity: 0;
+  overflow: hidden;
+  pointer-events: none;
 }
 
 .main-content {

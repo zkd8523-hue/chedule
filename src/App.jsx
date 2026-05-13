@@ -28,6 +28,7 @@ function App() {
   const [newRestDate, setNewRestDate] = useState('');
   const [scheduleData, setScheduleData] = useState(null);
   const [error, setError] = useState(null);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
 
   const staffByKey = Object.fromEntries(staff.map(s => [s.key, s.name]));
   const staffKeys = staff.map(s => s.key);
@@ -85,11 +86,17 @@ function App() {
     : null;
 
   return (
-    <div className="dashboard">
+    <div className={`dashboard ${sidebarOpen ? '' : 'sidebar-collapsed'}`}>
       <aside className="sidebar">
-        <div className="sidebar-header">
-          <h2 style={{ fontSize: '1.25rem', fontWeight: 700, marginBottom: '0.5rem' }}>스케줄 생성</h2>
-          <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>기간과 직원을 설정하세요</p>
+        <div className="sidebar-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '0.5rem' }}>
+          <div>
+            <h2 style={{ fontSize: '1.25rem', fontWeight: 700, marginBottom: '0.5rem' }}>스케줄 생성</h2>
+            <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>기간과 직원을 설정하세요</p>
+          </div>
+          <button onClick={() => setSidebarOpen(false)} aria-label="설정 패널 닫기"
+            style={{ flexShrink: 0, width: '32px', height: '32px', padding: 0, background: '#f1f5f9', color: '#475569', border: '1px solid #e2e8f0', borderRadius: '8px', cursor: 'pointer', fontSize: '1.1rem', fontWeight: 700, lineHeight: 1 }}>
+            ‹
+          </button>
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', padding: '0 0.5rem' }}>
@@ -196,7 +203,15 @@ function App() {
 
       <main className="main-content">
         <header className="header">
-          <h1>직원 근무 스케줄표</h1>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            {!sidebarOpen && (
+              <button onClick={() => setSidebarOpen(true)} aria-label="설정 패널 열기"
+                style={{ width: '36px', height: '36px', padding: 0, background: 'var(--accent-primary, #6366f1)', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '1.1rem', fontWeight: 700, lineHeight: 1, boxShadow: 'var(--shadow-sm)' }}>
+                ☰
+              </button>
+            )}
+            <h1>직원 근무 스케줄표</h1>
+          </div>
           {range && (
             <span className="badge" style={{ background: 'var(--accent-primary, #6366f1)', color: 'white', padding: '0.25rem 0.75rem', borderRadius: '99px', fontSize: '0.875rem', fontWeight: 600 }}>
               {range}
