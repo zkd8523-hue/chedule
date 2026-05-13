@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import { generateSchedule } from './logic/scheduler';
 
 const shiftLabels = { O: '오픈', M: '미들', C: '마감' };
@@ -26,8 +26,7 @@ function App() {
   const [specialRests, setSpecialRests] = useState([]);
   const [newRestStaff, setNewRestStaff] = useState('SH');
   const [newRestDate, setNewRestDate] = useState('');
-  const [scheduleData, setScheduleData] = useState(null); // { schedule, restDays, staffStats, staffKeys, staffByKey }
-  const [history, setHistory] = useState([]);
+  const [scheduleData, setScheduleData] = useState(null);
   const [error, setError] = useState(null);
 
   const staffByKey = Object.fromEntries(staff.map(s => [s.key, s.name]));
@@ -56,13 +55,6 @@ function App() {
 
   const removeSpecialRest = (idx) => setSpecialRests(specialRests.filter((_, i) => i !== idx));
 
-  const handleUndo = () => {
-    if (history.length === 0) return;
-    const prev = history[history.length - 1];
-    setScheduleData(prev);
-    setHistory(history.slice(0, -1));
-  };
-
   const handleGenerate = () => {
     try {
       setError(null);
@@ -77,7 +69,6 @@ function App() {
         weekendRestRotation: staffKeys,
         weekendClosingRotation: [...staffKeys.slice(1), staffKeys[0]],
       });
-      setHistory([]);
       setScheduleData({ ...result, staffKeys, staffByKey });
     } catch (e) {
       setError(e.message);
@@ -86,57 +77,6 @@ function App() {
   };
 
   // 드래그앤드롭: 슬롯의 시프트 타입 고정, 이름(인원)만 교체
-  const handleSwap = (dateA, staffA, dateB, staffB) => {
-    if (dateA === dateB && staffA === staffB) return;
-    setHistory(h => [...h.slice(-19), scheduleData]); // 최대 20단계 보관
-    setScheduleData(prev => {
-      const schedule = JSON.parse(JSON.stringify(prev.schedule));
-      const restDays = JSON.parse(JSON.stringify(prev.restDays));
-      const staffStats = JSON.parse(JSON.stringify(prev.staffStats));
-
-      const shiftA = schedule[dateA]?.[staffA] ?? 'R'; // dateA 슬롯 시프트
-      const shiftB = schedule[dateB]?.[staffB] ?? 'R'; // dateB 슬롯 시프트
-
-      // dateA 슬롯에 staffB 배치 (shiftA 유지)
-      if (shiftA === 'R') {
-        if (restDays[dateA]) restDays[dateA] = restDays[dateA].filter(s => s !== staffA);
-        if (!restDays[dateA]) restDays[dateA] = [];
-        restDays[dateA].push(staffB);
-        if (schedule[dateA]) delete schedule[dateA][staffB];
-      } else {
-        delete schedule[dateA][staffA];
-        schedule[dateA][staffB] = shiftA;
-        if (restDays[dateA]) restDays[dateA] = restDays[dateA].filter(s => s !== staffB);
-      }
-
-      // dateB 슬롯에 staffA 배치 (shiftB 유지)
-      if (shiftB === 'R') {
-        if (restDays[dateB]) restDays[dateB] = restDays[dateB].filter(s => s !== staffB);
-        if (!restDays[dateB]) restDays[dateB] = [];
-        restDays[dateB].push(staffA);
-        if (schedule[dateB]) delete schedule[dateB][staffA];
-      } else {
-        delete schedule[dateB][staffB];
-        schedule[dateB][staffA] = shiftB;
-        if (restDays[dateB]) restDays[dateB] = restDays[dateB].filter(s => s !== staffA);
-      }
-
-      // 통계: staffA는 shiftA→shiftB, staffB는 shiftB→shiftA
-      if (shiftA !== shiftB) {
-        if (staffStats[staffA]) {
-          if (shiftA !== 'R') { staffStats[staffA][shiftA]--; staffStats[staffA].totalWork--; }
-          if (shiftB !== 'R') { staffStats[staffA][shiftB]++; staffStats[staffA].totalWork++; }
-        }
-        if (staffStats[staffB]) {
-          if (shiftB !== 'R') { staffStats[staffB][shiftB]--; staffStats[staffB].totalWork--; }
-          if (shiftA !== 'R') { staffStats[staffB][shiftA]++; staffStats[staffB].totalWork++; }
-        }
-      }
-
-      return { ...prev, schedule, restDays, staffStats };
-    });
-  };
-
   const range = scheduleData
     ? (() => {
         const s = new Date(startDate), e = new Date(endDate);
@@ -269,43 +209,20 @@ function App() {
             <p style={{ fontSize: '1.125rem' }}>← 왼쪽에서 설정 후 "스케줄 생성하기"를 눌러주세요</p>
           </div>
         ) : (
-          <ScheduleGrid data={scheduleData} onSwap={handleSwap} />
+          <ScheduleGrid data={scheduleData} />
         )}
+
+        <footer style={{ marginTop: 'auto', paddingTop: '3rem', textAlign: 'center', fontSize: '0.8rem', color: '#94a3b8' }}>
+          욕보이소. - 김민기
+        </footer>
       </main>
     </div>
   );
 }
 
-function ScheduleGrid({ data, onSwap }) {
+function ScheduleGrid({ data }) {
   const { schedule, restDays, staffKeys, staffByKey } = data;
   const allDates = Object.keys(schedule).sort();
-  const dragSrc = useRef(null);
-  const [dragOver, setDragOver] = useState(null); // "date-staffKey"
-
-  const handleDragStart = (e, date, staffKey, shift) => {
-    dragSrc.current = { date, staffKey, shift };
-    e.dataTransfer.effectAllowed = 'move';
-  };
-
-  const handleDragOver = (e, date, staffKey) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
-    setDragOver(`${date}-${staffKey}`);
-  };
-
-  const handleDrop = (e, date, staffKey) => {
-    e.preventDefault();
-    setDragOver(null);
-    if (!dragSrc.current) return;
-    const { date: srcDate, staffKey: srcStaff } = dragSrc.current;
-    dragSrc.current = null;
-    onSwap(srcDate, srcStaff, date, staffKey);
-  };
-
-  const handleDragEnd = () => {
-    dragSrc.current = null;
-    setDragOver(null);
-  };
 
   return (
     <div className="month-section">
@@ -326,24 +243,8 @@ function ScheduleGrid({ data, onSwap }) {
                 {staffKeys.map(staffKey => {
                   const shift = dayShifts[staffKey] ?? (dayRests.includes(staffKey) ? 'R' : null);
                   if (!shift) return null;
-                  const isOver = dragOver === `${date}-${staffKey}`;
                   return (
-                    <div
-                      key={staffKey}
-                      className={`shift-tag ${shift}`}
-                      draggable
-                      onDragStart={e => handleDragStart(e, date, staffKey, shift)}
-                      onDragOver={e => handleDragOver(e, date, staffKey)}
-                      onDrop={e => handleDrop(e, date, staffKey)}
-                      onDragEnd={handleDragEnd}
-                      onDragLeave={() => setDragOver(null)}
-                      style={{
-                        cursor: 'grab',
-                        outline: isOver ? '2px solid #6366f1' : 'none',
-                        opacity: dragSrc.current && dragSrc.current.date === date && dragSrc.current.staffKey === staffKey ? 0.4 : 1,
-                        transition: 'outline 0.1s',
-                      }}
-                    >
+                    <div key={staffKey} className={`shift-tag ${shift}`}>
                       <span className="staff-name">{staffByKey[staffKey]}</span>
                       <span className="shift-label">{shift === 'R' ? '휴무' : shiftLabels[shift]}</span>
                     </div>
