@@ -1,14 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { generateSchedule } from './logic/scheduler';
 
 const shiftLabels = { O: '오픈', M: '미들', C: '마감' };
 
 const DEFAULT_STAFF = [
-  { key: 'SH', name: '성환' },
-  { key: 'YJ', name: '유진' },
-  { key: 'BW', name: '봉우' },
-  { key: 'MK', name: '민기' },
-  { key: 'JH', name: '준호' },
+  { key: 'SH', name: '성환', preferConsecutive: true },
+  { key: 'YJ', name: '유진', preferConsecutive: true },
+  { key: 'BW', name: '봉우', preferConsecutive: false },
+  { key: 'MK', name: '민기', preferConsecutive: true },
+  { key: 'JH', name: '준호', preferConsecutive: false },
 ];
 
 let keyCounter = DEFAULT_STAFF.length;
@@ -35,10 +35,12 @@ function App() {
 
   const updateStaffName = (key, name) => setStaff(staff.map(s => s.key === key ? { ...s, name } : s));
 
+  const toggleStaffPreference = (key) => setStaff(staff.map(s => s.key === key ? { ...s, preferConsecutive: !s.preferConsecutive } : s));
+
   const addStaff = () => {
     const name = newStaffName.trim();
     if (!name) return;
-    setStaff([...staff, { key: genKey(), name }]);
+    setStaff([...staff, { key: genKey(), name, preferConsecutive: false }]);
     setNewStaffName('');
   };
 
@@ -56,6 +58,30 @@ function App() {
 
   const removeSpecialRest = (idx) => setSpecialRests(specialRests.filter((_, i) => i !== idx));
 
+  useEffect(() => {
+    if (!scheduleData) return;
+
+    window.history.pushState(null, '', window.location.href);
+    const handlePopState = () => {
+      if (window.confirm('페이지에서 나가시겠습니까? 생성한 근무표가 사라집니다.')) {
+        window.removeEventListener('popstate', handlePopState);
+        window.history.back();
+      } else {
+        window.history.pushState(null, '', window.location.href);
+      }
+    };
+    const handleBeforeUnload = (e) => {
+      e.preventDefault();
+      e.returnValue = '';
+    };
+    window.addEventListener('popstate', handlePopState);
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [scheduleData]);
+
   const handleGenerate = () => {
     try {
       setError(null);
@@ -64,11 +90,13 @@ function App() {
         if (!restsByStaff[s]) restsByStaff[s] = [];
         restsByStaff[s].push(date);
       });
+      const preferConsecutiveMap = Object.fromEntries(staff.map(s => [s.key, !!s.preferConsecutive]));
       const result = generateSchedule({
         startDate, endDate, staffKeys,
         specialRests: restsByStaff,
         weekendRestRotation: staffKeys,
         weekendClosingRotation: [...staffKeys.slice(1), staffKeys[0]],
+        preferConsecutiveMap,
       });
       setScheduleData({ ...result, staffKeys, staffByKey });
     } catch (e) {
@@ -182,6 +210,10 @@ function App() {
               <div key={s.key} style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
                 <input value={s.name} onChange={e => updateStaffName(s.key, e.target.value)}
                   style={{ flex: 1, padding: '0.4rem 0.5rem', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '0.875rem' }} />
+                <label title="이틀 연속 휴무 선호" style={{ display: 'flex', alignItems: 'center', gap: '3px', fontSize: '0.7rem', color: '#475569', cursor: 'pointer', userSelect: 'none' }}>
+                  <input type="checkbox" checked={!!s.preferConsecutive} onChange={() => toggleStaffPreference(s.key)} />
+                  연속
+                </label>
                 <button onClick={() => removeStaff(s.key)}
                   style={{ padding: '0.4rem 0.6rem', background: '#fef2f2', color: '#ef4444', border: '1px solid #fecaca', borderRadius: '6px', cursor: 'pointer', fontWeight: 700, fontSize: '0.875rem' }}>
                   ×

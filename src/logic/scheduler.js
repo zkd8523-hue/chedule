@@ -35,6 +35,7 @@ export const generateSchedule = (options = {}) => {
     specialRests = {},
     weekendRestRotation = DEFAULT_WEEKEND_REST_ROTATION,
     weekendClosingRotation = DEFAULT_WEEKEND_CLOSING_ROTATION,
+    preferConsecutiveMap = null,
   } = options;
 
   const startDate = new Date(startDateStr);
@@ -83,8 +84,12 @@ export const generateSchedule = (options = {}) => {
   // 3. Fill remaining rest days per week
   weekStart = new Date(startDate);
   const totalStaff = staffKeys.length;
-  const prefConsec = staffKeys.slice(0, Math.ceil(totalStaff / 2));
-  const nonConsec = staffKeys.slice(Math.ceil(totalStaff / 2));
+  const prefConsec = preferConsecutiveMap
+    ? staffKeys.filter(k => preferConsecutiveMap[k])
+    : staffKeys.slice(0, Math.ceil(totalStaff / 2));
+  const nonConsec = preferConsecutiveMap
+    ? staffKeys.filter(k => !preferConsecutiveMap[k])
+    : staffKeys.slice(Math.ceil(totalStaff / 2));
 
   while (weekStart <= endDate) {
     const dates = getWeekDates(weekStart);
