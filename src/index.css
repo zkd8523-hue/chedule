@@ -164,3 +164,53 @@ body {
   opacity: 0.5;
 }
 
+@media (max-width: 1024px) {
+  .dashboard {
+    flex-direction: column;
+    padding: 1rem;
+    gap: 1rem;
+  }
+
+  .sidebar {
+    width: 100%;
+    height: auto;
+    position: static;
+    padding: 1.5rem;
+  }
+
+  .calendar-cell {
+    min-height: 90px;
+    padding: 0.5rem;
+  }
+
+  .date-num {
+    font-size: 0.9rem;
+  }
+
+  .shift-tag {
+    padding: 0.15rem 0.4rem;
+    font-size: 0.65rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .calendar-cell {
+    min-height: 70px;
+    padding: 0.35rem;
+  }
+
+  .calendar-header {
+    padding: 0.5rem;
+    font-size: 0.75rem;
+  }
+
+  .shift-tag {
+    font-size: 0.6rem;
+    padding: 0.1rem 0.3rem;
+  }
+
+  .date-num {
+    font-size: 0.8rem;
+  }
+}
+
